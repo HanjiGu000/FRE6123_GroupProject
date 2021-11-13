@@ -3,10 +3,13 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from scipy.sparse import data
 from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, GRU
 from keras import optimizers 
+from keras.losses import mean_squared_error
+
 import warnings
 
 warnings.simplefilter(action='error',category=UserWarning)
@@ -20,6 +23,7 @@ data_raw = pd.read_csv("data_cleaned.csv", index_col="Date", parse_dates=["Date"
 data_close = pd.DataFrame(data_raw["Close"])
 print('Number of Rows: ', data_close.shape[0])
 
+plt.rcParams.update(plt.rcParamsDefault)
 
 fig = plt.figure(figsize=(14, 6))
 plt.plot(data_close)
@@ -28,7 +32,6 @@ plt.ylabel('SPY Price')
 plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
 plt.title('SPY Index')
 plt.show()
-
 #%%
 #Min-Max Normalization
 data_close_norm = data_close.copy()
@@ -47,16 +50,16 @@ plt.show()
 #%%
 # Partition data into data train, val & test
 totaldata = data_close.values
-totaldatatrain = int(len(totaldata)*0.7)
-totaldataval = int(len(totaldata)*0.1)
-totaldatatest = int(len(totaldata)*0.2)
+totaldatatrain = int(len(totaldata)*0.5)
+totaldataval = int(len(totaldata)*0.2)
+totaldatatest = int(len(totaldata)*0.3)
 
 # Store data into each partition
 training_set = data_close_norm[0: totaldatatrain]
 val_set = data_close_norm[totaldatatrain: totaldatatrain + totaldataval]
 test_set = data_close_norm[totaldatatrain + totaldataval:]
 
-#%%
+
 # graph of data training
 fig = plt.figure(figsize=(10, 4))
 plt.plot(training_set)
@@ -85,9 +88,8 @@ plt.show()
 test_set
 
 
-#%%
 # Initiaton value of lag
-lag = 2
+lag = 20
 # sliding windows function
 def create_sliding_windows(data,len_data,lag):
     x=[]
@@ -115,7 +117,7 @@ x_test = np.reshape(x_test, (x_test.shape[0],x_test.shape[1],1))
 #%%
 # Hyperparameters
 learning_rate = 0.0001
-hidden_unit = 64
+hidden_unit = 128
 batch_size=256
 epoch = 100
 
@@ -144,17 +146,6 @@ regressorGRU.compile(loss='mean_squared_error', optimizer='adam')
 # Fitting ke data training dan data validation
 pred = regressorGRU.fit(x_train, y_train, validation_data=(x_val,y_val), batch_size=batch_size, epochs=epoch)
 
-# Graph model loss (train loss & val loss)
-fig = plt.figure(figsize=(10, 4))
-plt.plot(pred.history['loss'], label='train loss')
-plt.plot(pred.history['val_loss'], label='val loss')
-plt.title('model loss')
-plt.ylabel('loss')
-plt.xlabel('epoch')
-plt.legend(loc='upper right')
-plt.show()
-
-#%%
 # Graph model loss (train loss & val loss)
 fig = plt.figure(figsize=(10, 4))
 plt.plot(pred.history['loss'], label='train loss')
@@ -197,7 +188,7 @@ datacompare
 # Calculatre value of Root Mean Square Error 
 def rmse(datatest, datapred):
     return np.round(np.sqrt(np.mean((datapred - datatest) ** 2)), 4)
-print('Result Root Mean Square Error Prediction Model :',rmse(datatest, datapred))
+print('Result Root Mean Square Error Prediction Model :',rmse(datacompare['Prediction Results'], datacompare['Data Test']))
 
 def mape(datatest, datapred): 
     return np.round(np.mean(np.abs((datatest - datapred) / datatest) * 100), 4)
@@ -207,11 +198,20 @@ print('Result Mean Absolute Percentage Error Prediction Model : ', mape(datatest
 
 #%%
 # Create graph data test and prediction result
-plt.figure(num=None, figsize=(10, 4), dpi=80,facecolor='w', edgecolor='k')
-plt.title('Graph Comparison Data Actual and Data Prediction')
-plt.plot(datacompare['Data Test'], color='red',label='Data Test')
-plt.plot(datacompare['Prediction Results'], color='blue',label='Prediction Results')
-plt.xlabel('Day')
-plt.ylabel('Price')
-plt.legend()
+plt.figure(num=None, figsize=(30, 12), dpi=80, facecolor='w', edgecolor='k')
+plt.rcParams.update(plt.rcParamsDefault)
+
+#plt.plot(training_set)
+#plt.plot(val_set)
+#plt.plot(data_close)
+
+plt.plot(datacompare['Data Test'], color='black',label='Test Data')
+plt.plot(datacompare['Prediction Results'], color='red',label='Prediction Data')
+plt.xlabel('Day', fontsize=20)
+plt.ylabel('SPY Daily Closing Price', fontsize=20)
+plt.legend(fontsize=20)
 plt.show()
+
+# %%
+
+# %%
